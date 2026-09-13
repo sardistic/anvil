@@ -51,6 +51,7 @@ const server = http.createServer((req, res) => {
     req.on('data', c => { body += c; if (body.length > 2048) req.destroy(); });
     req.on('end', () => {
       let d; try { d = JSON.parse(body); } catch { return json(res, 400, { error: 'bad json' }); }
+      if (!d || typeof d !== 'object' || Array.isArray(d)) return json(res, 400, { error: 'bad json' });
       const name = cleanName(d.name), score = int(d.score, 0, 200000);
       const rank = ['S', 'A', 'B', 'C'].includes(d.rank) ? d.rank : null;
       const r = qInsert.run(name, score, rank, int(d.secs, 0, 86400), int(d.fragments, 0, 999), int(d.stomps, 0, 99));
