@@ -2,7 +2,13 @@
 
 A short 1-bit browser game: a lone woman walks a monochrome cyberpunk city toward the "life after death" upload.
 
-Open `index.html` in any browser. No build step, no dependencies.
+Play at https://anvil.sardistic.com — or open `index.html` in any browser (the leaderboard shows as offline without the server).
+
+## Run the server
+`node server.js` (Node 24+, uses built-in `node:sqlite`; no npm install). Env: `PORT` (80), `DB_PATH` (./scores.db). Or `docker build -t anvil . && docker run -p 8080:80 -v $PWD/data:/data anvil`.
+
+## High scores
+After the upload completes you type a name (12 chars, remembered locally) and press Enter; the board "THE KEPT" shows the top 8 with your row inverted, or your position if you're below the cut. API: `GET /api/scores` (top 20), `POST /api/scores` `{name, score, rank, secs, fragments, stomps}` (one per IP per 10 s).
 
 ## Controls
 - Move: `←` `→` or `A` `D`
