@@ -49,9 +49,9 @@ function int(v, lo, hi) { const n = Math.floor(Number(v)); return Number.isFinit
 function readBody(req, limit) {
   return new Promise((resolve, reject) => {
     const declared = Number(req.headers['content-length']);
-    if (Number.isFinite(declared) && declared > limit) { req.destroy(); return reject(new Error('too large')); }
+    if (Number.isFinite(declared) && declared > limit) return reject(new Error('too large'));
     let body = '', size = 0;
-    req.on('data', c => { size += c.length; if (size > limit) { req.destroy(); reject(new Error('too large')); return; } body += c; });
+    req.on('data', c => { size += c.length; if (size > limit) { reject(new Error('too large')); return; } body += c; });
     req.on('end', () => resolve(body));
     req.on('error', reject);
   });
@@ -71,7 +71,7 @@ async function handle(req, res) {
   if (p === '/api/scores' && m === 'POST') {
     const ip = clientIp(req), now = Date.now(); prunePosts(now);
     if (now - (lastPost.get(ip) || 0) < POST_INTERVAL_MS) return json(res, 429, { error: 'slow down' });
-    let body; try { body = await readBody(req, MAX_BODY); } catch { if (!res.destroyed) json(res, 413, { error: 'too large' }); return; }
+    let body; try { body = await readBody(req, MAX_BODY); } catch { res.once('finish', () => req.destroy()); return send(res, 413, { 'Content-Type': 'application/json', Connection: 'close' }, '{"error":"too large"}'); }
     let d; try { d = JSON.parse(body); } catch { return json(res, 400, { error: 'bad json' }); }
     if (!d || typeof d !== 'object' || Array.isArray(d)) return json(res, 400, { error: 'bad body' });
     const name = cleanName(d.name), score = int(d.score, 0, 200000);
