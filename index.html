@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ANVIL</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'><rect width='16' height='16' fill='%23000'/><g fill='%23fff'><rect x='2' y='4' width='12' height='2'/><rect x='1' y='5' width='3' height='1'/><rect x='12' y='3' width='3' height='1'/><rect x='5' y='6' width='6' height='3'/><rect x='6' y='9' width='4' height='2'/><rect x='4' y='11' width='8' height='2'/><rect x='1' y='1' width='1' height='1'/><rect x='3' y='1' width='1' height='1'/><rect x='2' y='2' width='1' height='1'/><rect x='13' y='14' width='1' height='1'/><rect x='11' y='14' width='1' height='1'/><rect x='12' y='13' width='1' height='1'/><rect x='14' y='13' width='1' height='1'/></g></svg>">
 <style>
   html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:"Courier New",monospace;color:#fff}
   #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
@@ -54,7 +55,13 @@ addEventListener('keydown', e => {
   if ([' ','arrowup','w'].includes(k) && !e.repeat) jumpBuf = 8;
   if (['shift','x','k'].includes(k) && !e.repeat) dashBuf = 8;
   if (k === 'm') toggleMute();
-  if (k === 'r') reset(true);
+  if (state === 'ending' && endPhase === 'name') {
+    if (e.key === 'Enter') submitScore();
+    else if (e.key === 'Backspace') nameBuf = nameBuf.slice(0, -1);
+    else if (e.key.length === 1 && /[a-z0-9 _.\-]/i.test(e.key) && nameBuf.length < 12) nameBuf += e.key.toUpperCase();
+    e.preventDefault(); return;
+  }
+  if (k === 'r' && !(state === 'ending' && endPhase === 'sending')) reset(true);
   startAudio();
 });
 addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
@@ -261,6 +268,21 @@ function actIndex() { let a = 0; for (let i = 0; i < acts.length; i++) if (P.x >
 let state, P, cam, frames, fragments, drones, integrity, glitch, invuln, actTitle, actT, checkpoint, endT, deadT, collected, lastBeatTime, beatN, shake, notice, noticeT, dashT, dashCd, trail, bursts, stomps, lastStep;
 let score, airChain, fragChain, fragChainT, pops, freeze, slowT, crates, lastSafe, nearMissCd, runFrames, solids;
 let pickups, power, shield, airJumps, setbacks, actHits, glowT;
+let endPhase, nameBuf, board, myId, myPos, boardMsg;
+try { nameBuf = localStorage.getItem('anvil.name') || ''; } catch (e) { nameBuf = ''; }
+function finalRank() { return score >= 2600 ? 'S' : score >= 1800 ? 'A' : score >= 1000 ? 'B' : 'C'; }
+async function loadBoard() { try { const r = await fetch('api/scores'); if (!r.ok) throw 0; board = (await r.json()).scores; } catch (e) { board = null; } }
+async function submitScore() {
+  if (endPhase !== 'name') return; endPhase = 'sending'; sfx('heal');
+  const name = nameBuf.trim() || 'ANON'; try { localStorage.setItem('anvil.name', name); } catch (e) {}
+  try {
+    const r = await fetch('api/scores', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, score, rank: finalRank(), secs: Math.round(runFrames / 60), fragments: collected, stomps }) });
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json(); board = d.scores; myId = d.id; myPos = d.position; boardMsg = null;
+  } catch (e) { boardMsg = 'OFFLINE - SCORE NOT SAVED'; }
+  endPhase = 'board';
+}
 function reset(full) {
   state = full ? 'title' : 'play';
   P = { x: (full ? 40 : checkpoint), y: GROUND - 26, vx: 0, vy: 0, w: 10, h: 26, ground: false, face: 1, walk: 0, onMover: null };
@@ -339,7 +361,7 @@ function update() {
 
   if (state === 'title') { if (anyKey) { state = 'play'; anyKey = false; actTitle = acts[0][1]; actT = 150; } return; }
   if (state === 'dead') { deadT++; if (deadT > 80) reset(false); return; }
-  if (state === 'ending') { endT++; return; }
+  if (state === 'ending') { endT++; if (endT === 1) { endPhase = 'name'; board = undefined; myId = null; myPos = null; boardMsg = null; loadBoard(); } return; }
   runFrames++;
 
   // ----- play -----
@@ -747,12 +769,30 @@ function drawEnding() {
   if (t > 200) text('UPLOAD ' + String(Math.min(100, ((t - 200) * 0.6) | 0)).padStart(3, '0') + '%', W / 2, 160, 10, 0, 'center');
   if (t > 380) text('she is not gone. she is kept.', W / 2, 178, 10, Math.max(0, 200 - (t - 380) * 2), 'center', false);
   if (t > 520) {
-    text('A N V I L', W / 2, 60, 44, 0, 'center');
-    ctx.fillStyle = G(250); ctx.fillRect(0, 110, W, 60);
-    const rank = score >= 2600 ? 'S' : score >= 1800 ? 'A' : score >= 1000 ? 'B' : 'C', secs = Math.round(runFrames / 60);
-    text('SCORE ' + score + '     RANK ' + rank, W / 2, 116, 14, 0, 'center');
-    text('fragments ' + collected + '/' + fragmentsInit.length + '   lights silenced ' + stomps + '/' + drones.length + '   ' + Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0'), W / 2, 138, 9, 0, 'center', false);
-    text('R  TO RETURN', W / 2, 200, 10, 0, 'center');
+    text('A N V I L', W / 2, 36, 40, 0, 'center');
+    ctx.fillStyle = G(250); ctx.fillRect(0, 82, W, 140);
+    const secs = Math.round(runFrames / 60);
+    text('SCORE ' + score + '     RANK ' + finalRank(), W / 2, 84, 14, 0, 'center');
+    text('fragments ' + collected + '/' + fragmentsInit.length + '   lights silenced ' + stomps + '/' + drones.length + '   ' + Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0'), W / 2, 104, 9, 0, 'center', false);
+    if (endPhase === 'name' || endPhase === 'sending') {
+      text('WHO WAS KEPT?', W / 2, 128, 11, 0, 'center');
+      ctx.fillStyle = G(0); ctx.fillRect(W / 2 - 62, 144, 124, 18);
+      const shown = nameBuf + ((endPhase === 'name' && (frames >> 4) & 1) ? '_' : ' ');
+      text(shown, W / 2, 148, 12, 255, 'center');
+      text(endPhase === 'sending' ? 'SENDING...' : 'type a name  -  ENTER to submit', W / 2, 168, 9, 0, 'center', false);
+      if (board && board.length) text('top: ' + board[0].name + ' ' + board[0].score, W / 2, 200, 9, 0, 'center', false);
+      if (board === null) text('leaderboard offline', W / 2, 200, 9, 0, 'center', false);
+    } else if (endPhase === 'board') {
+      text('THE KEPT', W / 2, 118, 11, 0, 'center');
+      if (boardMsg) text(boardMsg, W / 2, 140, 9, 0, 'center', false);
+      else if (board) {
+        const rows = board.slice(0, 8); let mineShown = false;
+        rows.forEach((b, i) => { const y = 132 + i * 8.5, mine = b.id === myId; if (mine) { mineShown = true; ctx.fillStyle = G(0); ctx.fillRect(W / 2 - 100, y - 0.5, 200, 8.5); }
+          const sh = mine ? 255 : 0; text(String(i + 1).padStart(2, '0'), W / 2 - 96, y, 8, sh, 'left'); text(b.name, W / 2 - 78, y, 8, sh, 'left'); text(String(b.score), W / 2 + 96, y, 8, sh, 'right'); text(b.rank || '', W / 2 + 60, y, 8, sh, 'right'); });
+        if (!mineShown && myPos) text('you: #' + myPos + '  ' + (nameBuf.trim() || 'ANON') + '  ' + score, W / 2, 132 + rows.length * 8.5 + 2, 8, 0, 'center');
+      }
+      text('R  TO RETURN', W / 2, 210, 10, 0, 'center');
+    }
   }
 }
 

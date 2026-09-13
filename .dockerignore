@@ -2,3 +2,4 @@
 docs
 .agent
 README.md
+*.db

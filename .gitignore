@@ -1,2 +1,3 @@
 docs/agent/HANDOFF.md
 .agent/runtime/
+*.db
