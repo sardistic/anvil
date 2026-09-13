@@ -37,7 +37,7 @@ const SECURITY_HEADERS = {
   'Referrer-Policy': 'no-referrer',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
   // the game is one inline script + inline styles; it only talks to its own origin
-  'Content-Security-Policy': "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'",
+  'Content-Security-Policy': "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'",
 };
 function send(res, code, headers, body) { res.writeHead(code, Object.assign({}, SECURITY_HEADERS, headers)); res.end(body); }
 function json(res, code, body) { send(res, code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, JSON.stringify(body)); }
