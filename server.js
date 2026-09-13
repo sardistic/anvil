@@ -7,6 +7,7 @@ const { DatabaseSync } = require('node:sqlite');
 const PORT = Number(process.env.PORT || 80);
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'scores.db');
 const INDEX = path.join(__dirname, 'index.html');
+const FAVICON = path.join(__dirname, 'favicon.svg');
 const MAX_NAME = 12, TOP_N = 20;
 
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
@@ -61,6 +62,10 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (url.pathname === '/healthz') return json(res, 200, { ok: true });
+  if (req.method === 'GET' && (url.pathname === '/favicon.svg' || url.pathname === '/favicon.ico')) {
+    res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
+    return fs.createReadStream(FAVICON).pipe(res);
+  }
   if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' });
     return fs.createReadStream(INDEX).pipe(res);
