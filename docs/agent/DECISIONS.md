@@ -10,3 +10,8 @@
 - The database lives on a host volume (`./data:/data`, `DB_PATH=/data/scores.db`) so rebuilds keep scores.
 - Input is sanitized server-side (name → A-Z0-9 space _ . -, max 12; numeric fields clamped); one POST per IP per 10 s. No auth — it's an arcade board, not a bank.
 - The client degrades: if the API is unreachable (artifact copy, file://), the board shows "offline" and the run still ends normally.
+
+## 2026-09-12 — Analytics and status
+- First-party analytics via the house Umami instance (website `anvil.sardistic.com`, id 19f258b6-2f38-473f-8edc-cbdb82181854), tracker limited to that domain so local/artifact copies never report. Two custom events: `upload_complete` (run finished; rank, score, secs) and `score_saved`.
+- CSP extended to allow the analytics script and its beacon; the game still loads nothing else off-origin.
+- The site is registered on status.sardistic.com as a "Public apps" card bound to compose project `anvil`, checkout `/srv/anvil/repo`, and this repo; page views come from the domain-keyed Umami aggregation there.

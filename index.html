@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ANVIL</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script defer data-cfasync="false" src="https://analytics.sardistic.com/script.js" data-website-id="19f258b6-2f38-473f-8edc-cbdb82181854" data-domains="anvil.sardistic.com"></script>
 <style>
   html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:"Courier New",monospace;color:#fff}
   #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
@@ -282,6 +283,7 @@ async function submitScore() {
     const d = await r.json(); board = d.scores; myId = d.id; myPos = d.position; boardMsg = null;
   } catch (e) { boardMsg = 'OFFLINE - SCORE NOT SAVED'; }
   endPhase = 'board';
+  try { window.umami && umami.track('score_saved', { rank: finalRank(), score }); } catch (e) {}
 }
 function reset(full) {
   state = full ? 'title' : 'play';
@@ -361,7 +363,7 @@ function update() {
 
   if (state === 'title') { if (anyKey) { state = 'play'; anyKey = false; actTitle = acts[0][1]; actT = 150; } return; }
   if (state === 'dead') { deadT++; if (deadT > 80) reset(false); return; }
-  if (state === 'ending') { endT++; if (endT === 1) { endPhase = 'name'; board = undefined; myId = null; myPos = null; boardMsg = null; loadBoard(); } return; }
+  if (state === 'ending') { endT++; if (endT === 1) { try { window.umami && umami.track('upload_complete', { rank: finalRank(), score, secs: Math.round(runFrames / 60) }); } catch (e) {} endPhase = 'name'; board = undefined; myId = null; myPos = null; boardMsg = null; loadBoard(); } return; }
   runFrames++;
 
   // ----- play -----
